@@ -1,0 +1,536 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core primitives
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 260 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'oyasordaniel@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (isVerifiedUser() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function isValidSlug(slug) {
+      return slug is string && slug.size() >= 2 && slug.size() <= 180 && slug.matches('^[a-z0-9\\-]+$');
+    }
+
+    // Entity validators
+    function isValidProfile(data) {
+      return data.keys().hasAll(['uid', 'fullName', 'email', 'role', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'fullName', 'email', 'phone', 'avatarUrl', 'role', 'status', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 120
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 180
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 40))
+        && (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 500))
+        && data.role in ['customer', 'dealer', 'private_seller', 'admin']
+        && data.status in ['active', 'suspended']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDealer(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'businessName', 'slug', 'description', 'state', 'city', 'verificationStatus', 'isFeatured', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'ownerId', 'businessName', 'slug', 'description', 'coverImageUrl', 'phone', 'whatsapp', 'website', 'state', 'city', 'address', 'verificationStatus', 'isFeatured', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.ownerId)
+        && data.businessName is string && data.businessName.size() >= 2 && data.businessName.size() <= 140
+        && isValidSlug(data.slug)
+        && data.description is string && data.description.size() >= 10 && data.description.size() <= 2000
+        && (!('coverImageUrl' in data) || (data.coverImageUrl is string && data.coverImageUrl.size() <= 500))
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 40))
+        && (!('whatsapp' in data) || (data.whatsapp is string && data.whatsapp.size() <= 40))
+        && (!('website' in data) || (data.website is string && data.website.size() <= 300))
+        && data.state is string && data.state.size() >= 2 && data.state.size() <= 80
+        && data.city is string && data.city.size() >= 2 && data.city.size() <= 80
+        && (!('address' in data) || (data.address is string && data.address.size() <= 300))
+        && data.verificationStatus in ['pending', 'verified', 'rejected', 'info_requested']
+        && data.isFeatured is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDealerDocument(data) {
+      return data.keys().hasAll(['id', 'dealerId', 'ownerId', 'documentType', 'referenceCode', 'reviewStatus', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'dealerId', 'ownerId', 'documentType', 'referenceCode', 'notes', 'reviewStatus', 'reviewedBy', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.dealerId)
+        && isValidId(data.ownerId)
+        && data.documentType in ['cac_certificate', 'showroom_proof', 'director_id', 'import_permit']
+        && data.referenceCode is string && data.referenceCode.size() >= 2 && data.referenceCode.size() <= 180
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000))
+        && data.reviewStatus in ['pending', 'approved', 'rejected']
+        && (!('reviewedBy' in data) || (data.reviewedBy is string && data.reviewedBy.size() <= 128))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidListing(data) {
+      return data.keys().hasAll([
+          'id', 'sellerId', 'sellerType', 'sellerName', 'make', 'makeSlug', 'model', 'modelSlug',
+          'category', 'title', 'slug', 'year', 'price', 'currency', 'priceType', 'mileageKm',
+          'condition', 'bodyType', 'transmission', 'fuelType', 'description', 'state', 'city',
+          'imageUrls', 'listingStatus', 'availabilityStatus', 'moderationStatus', 'isFeatured',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'sellerId', 'dealerId', 'sellerType', 'sellerName', 'sellerWhatsapp',
+          'make', 'makeSlug', 'model', 'modelSlug', 'generationName', 'variantName',
+          'category', 'title', 'slug', 'year', 'price', 'currency', 'priceType', 'mileageKm',
+          'condition', 'bodyType', 'transmission', 'fuelType', 'drivetrain', 'engine',
+          'horsepower', 'torque', 'zeroTo100', 'topSpeed', 'exteriorColor', 'interiorColor',
+          'description', 'state', 'city', 'imageUrls', 'listingStatus', 'availabilityStatus',
+          'moderationStatus', 'moderationFeedback', 'isFeatured', 'collectionTag',
+          'enquiryCount', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.sellerId)
+        && (!('dealerId' in data) || (data.dealerId is string && data.dealerId.size() <= 128))
+        && data.sellerType in ['dealer', 'private_seller', 'curated']
+        && data.sellerName is string && data.sellerName.size() >= 2 && data.sellerName.size() <= 140
+        && (!('sellerWhatsapp' in data) || (data.sellerWhatsapp is string && data.sellerWhatsapp.size() <= 40))
+        && data.make is string && data.make.size() >= 1 && data.make.size() <= 80
+        && data.makeSlug is string && data.makeSlug.size() >= 1 && data.makeSlug.size() <= 80
+        && data.model is string && data.model.size() >= 1 && data.model.size() <= 100
+        && data.modelSlug is string && data.modelSlug.size() >= 1 && data.modelSlug.size() <= 100
+        && (!('generationName' in data) || (data.generationName is string && data.generationName.size() <= 100))
+        && (!('variantName' in data) || (data.variantName is string && data.variantName.size() <= 100))
+        && data.category in ['Exotic', 'Luxury', 'Executive', 'Performance', 'Luxury SUVs', 'Premium sedans']
+        && data.title is string && data.title.size() >= 5 && data.title.size() <= 160
+        && isValidSlug(data.slug)
+        && data.year is number && data.year >= 1960 && data.year <= 2030
+        && data.price is number && data.price >= 0
+        && data.currency in ['NGN', 'USD']
+        && data.priceType in ['fixed', 'negotiable', 'price_on_request']
+        && data.mileageKm is number && data.mileageKm >= 0
+        && data.condition in ['brand_new', 'foreign_used', 'nigeria_used']
+        && data.bodyType is string && data.bodyType.size() >= 2 && data.bodyType.size() <= 60
+        && data.transmission is string && data.transmission.size() >= 2 && data.transmission.size() <= 60
+        && data.fuelType is string && data.fuelType.size() >= 2 && data.fuelType.size() <= 60
+        && (!('drivetrain' in data) || (data.drivetrain is string && data.drivetrain.size() <= 60))
+        && (!('engine' in data) || (data.engine is string && data.engine.size() <= 100))
+        && (!('horsepower' in data) || (data.horsepower is string && data.horsepower.size() <= 40))
+        && (!('torque' in data) || (data.torque is string && data.torque.size() <= 40))
+        && (!('zeroTo100' in data) || (data.zeroTo100 is string && data.zeroTo100.size() <= 40))
+        && (!('topSpeed' in data) || (data.topSpeed is string && data.topSpeed.size() <= 40))
+        && (!('exteriorColor' in data) || (data.exteriorColor is string && data.exteriorColor.size() <= 60))
+        && (!('interiorColor' in data) || (data.interiorColor is string && data.interiorColor.size() <= 60))
+        && data.description is string && data.description.size() >= 20 && data.description.size() <= 4000
+        && data.state is string && data.state.size() >= 2 && data.state.size() <= 80
+        && data.city is string && data.city.size() >= 2 && data.city.size() <= 80
+        && data.imageUrls is list && data.imageUrls.size() >= 1 && data.imageUrls.size() <= 12
+        && data.imageUrls[0] is string && data.imageUrls[0].size() >= 1 && data.imageUrls[0].size() <= 500
+        && data.listingStatus in ['draft', 'pending', 'published', 'rejected', 'archived']
+        && data.availabilityStatus in ['available', 'reserved', 'sold', 'unavailable']
+        && data.moderationStatus in ['pending', 'approved', 'rejected', 'revision_required']
+        && (!('moderationFeedback' in data) || (data.moderationFeedback is string && data.moderationFeedback.size() <= 1000))
+        && data.isFeatured is bool
+        && (!('collectionTag' in data) || (data.collectionTag is string && data.collectionTag.size() <= 80))
+        && (!('enquiryCount' in data) || (data.enquiryCount is number && data.enquiryCount >= 0))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidVerificationRecord(data) {
+      return data.keys().hasAll(['id', 'listingId', 'verificationType', 'status', 'notes', 'evidenceReference', 'verifiedBy', 'verifiedAt'])
+        && data.keys().hasOnly(['id', 'listingId', 'verificationType', 'status', 'notes', 'evidenceReference', 'verifiedBy', 'verifiedAt'])
+        && isValidId(data.id)
+        && isValidId(data.listingId)
+        && data.verificationType in ['seller_identity', 'dealer_business', 'vehicle_identity', 'ownership_documentation', 'physical_inspection']
+        && data.status in ['verified', 'pending', 'failed']
+        && data.notes is string && data.notes.size() >= 2 && data.notes.size() <= 800
+        && data.evidenceReference is string && data.evidenceReference.size() >= 2 && data.evidenceReference.size() <= 180
+        && data.verifiedBy is string && data.verifiedBy.size() >= 2 && data.verifiedBy.size() <= 128
+        && data.verifiedAt is timestamp;
+    }
+
+    function isValidEnquiry(data) {
+      return data.keys().hasAll(['id', 'sellerId', 'buyerName', 'buyerPhone', 'buyerEmail', 'message', 'preferredContact', 'enquiryStatus', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'listingId', 'listingTitle', 'dealerId', 'sellerId', 'buyerUid', 'buyerName', 'buyerPhone', 'buyerEmail', 'message', 'preferredContact', 'enquiryStatus', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && (!('listingId' in data) || (data.listingId is string && data.listingId.size() <= 128))
+        && (!('listingTitle' in data) || (data.listingTitle is string && data.listingTitle.size() <= 180))
+        && (!('dealerId' in data) || (data.dealerId is string && data.dealerId.size() <= 128))
+        && isValidId(data.sellerId)
+        && (!('buyerUid' in data) || (data.buyerUid is string && data.buyerUid.size() <= 128))
+        && data.buyerName is string && data.buyerName.size() >= 2 && data.buyerName.size() <= 120
+        && data.buyerPhone is string && data.buyerPhone.size() >= 6 && data.buyerPhone.size() <= 40
+        && data.buyerEmail is string && data.buyerEmail.size() >= 3 && data.buyerEmail.size() <= 180
+        && data.message is string && data.message.size() >= 5 && data.message.size() <= 2000
+        && data.preferredContact in ['whatsapp', 'phone', 'email']
+        && data.enquiryStatus in ['new', 'contacted', 'qualified', 'closed']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSavedListing(data) {
+      return data.keys().hasAll(['id', 'profileId', 'listingId', 'createdAt'])
+        && data.keys().hasOnly(['id', 'profileId', 'listingId', 'createdAt'])
+        && isValidId(data.id)
+        && isValidId(data.profileId)
+        && isValidId(data.listingId)
+        && data.createdAt is timestamp;
+    }
+
+    function isValidArticle(data) {
+      return data.keys().hasAll(['id', 'authorId', 'authorName', 'category', 'title', 'slug', 'excerpt', 'body', 'featuredImageUrl', 'status', 'publishedAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'authorId', 'authorName', 'category', 'seriesName', 'title', 'slug', 'excerpt', 'body', 'featuredImageUrl', 'researchDate', 'relatedMake', 'relatedModel', 'status', 'publishedAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.authorId)
+        && data.authorName is string && data.authorName.size() >= 2 && data.authorName.size() <= 120
+        && data.category in ['News', 'Reviews', 'Buying guides', 'Comparisons', 'Ownership', 'Market']
+        && (!('seriesName' in data) || (data.seriesName is string && data.seriesName.size() <= 100))
+        && data.title is string && data.title.size() >= 5 && data.title.size() <= 180
+        && isValidSlug(data.slug)
+        && data.excerpt is string && data.excerpt.size() >= 10 && data.excerpt.size() <= 600
+        && data.body is string && data.body.size() >= 50 && data.body.size() <= 15000
+        && data.featuredImageUrl is string && data.featuredImageUrl.size() >= 1 && data.featuredImageUrl.size() <= 500
+        && (!('researchDate' in data) || (data.researchDate is string && data.researchDate.size() <= 60))
+        && (!('relatedMake' in data) || (data.relatedMake is string && data.relatedMake.size() <= 80))
+        && (!('relatedModel' in data) || (data.relatedModel is string && data.relatedModel.size() <= 100))
+        && data.status in ['draft', 'published']
+        && data.publishedAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidListingReport(data) {
+      return data.keys().hasAll(['id', 'listingId', 'reason', 'details', 'status', 'createdAt'])
+        && data.keys().hasOnly(['id', 'listingId', 'listingTitle', 'reason', 'details', 'reporterEmail', 'status', 'createdAt'])
+        && isValidId(data.id)
+        && isValidId(data.listingId)
+        && (!('listingTitle' in data) || (data.listingTitle is string && data.listingTitle.size() <= 180))
+        && data.reason in ['misleading_price', 'fake_photos', 'already_sold', 'suspected_fraud', 'other']
+        && data.details is string && data.details.size() >= 5 && data.details.size() <= 1500
+        && (!('reporterEmail' in data) || (data.reporterEmail is string && data.reporterEmail.size() <= 180))
+        && data.status in ['open', 'reviewed', 'resolved']
+        && data.createdAt is timestamp;
+    }
+
+    function isValidNewsletterSubscriber(data) {
+      return data.keys().hasAll(['id', 'email', 'createdAt'])
+        && data.keys().hasOnly(['id', 'email', 'createdAt'])
+        && isValidId(data.id)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 180
+        && data.createdAt is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['id', 'actorId', 'actorEmail', 'action', 'targetType', 'targetId', 'summary', 'createdAt'])
+        && data.keys().hasOnly(['id', 'actorId', 'actorEmail', 'action', 'targetType', 'targetId', 'summary', 'createdAt'])
+        && isValidId(data.id)
+        && isValidId(data.actorId)
+        && data.actorEmail is string && data.actorEmail.size() >= 3 && data.actorEmail.size() <= 180
+        && data.action is string && data.action.size() >= 2 && data.action.size() <= 100
+        && data.targetType is string && data.targetType.size() >= 2 && data.targetType.size() <= 80
+        && isValidId(data.targetId)
+        && data.summary is string && data.summary.size() >= 2 && data.summary.size() <= 500
+        && data.createdAt is timestamp;
+    }
+
+    // Admins registry
+    match /admins/{uid} {
+      allow get: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isBootstrappedAdmin();
+      allow create, update, delete: if isBootstrappedAdmin();
+    }
+
+    // Profiles (strict PII protection, no self-assigned admin role)
+    match /profiles/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isBootstrappedAdmin();
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && request.auth.uid == userId
+        && isValidProfile(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().role in ['customer', 'dealer', 'private_seller']
+        && incoming().status == 'active'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && isValidProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            request.auth.uid == userId
+            && incoming().role == existing().role
+            && incoming().status == existing().status
+            && incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'phone', 'avatarUrl', 'updatedAt'])
+          )
+        );
+      allow delete: if false;
+    }
+
+    // Dealership profiles
+    match /dealers/{dealerId} {
+      allow get: if existing().verificationStatus == 'verified'
+        || (isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin()));
+      allow list: if existing().verificationStatus == 'verified'
+        || (isSignedIn() && existing().ownerId == request.auth.uid)
+        || isBootstrappedAdmin();
+      allow create: if isVerifiedUser()
+        && isValidId(dealerId)
+        && isValidDealer(incoming())
+        && incoming().id == dealerId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            incoming().ownerId == request.auth.uid
+            && incoming().verificationStatus == 'pending'
+            && incoming().isFeatured == false
+          )
+        );
+      allow update: if isVerifiedUser()
+        && isValidId(dealerId)
+        && isValidDealer(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            existing().ownerId == request.auth.uid
+            && incoming().verificationStatus == existing().verificationStatus
+            && incoming().isFeatured == existing().isFeatured
+            && incoming().diff(existing()).affectedKeys().hasOnly(['businessName', 'description', 'coverImageUrl', 'phone', 'whatsapp', 'website', 'state', 'city', 'address', 'updatedAt'])
+          )
+        );
+      allow delete: if false;
+    }
+
+    // Private dealer verification documents
+    match /dealer_documents/{docId} {
+      allow get: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if (isSignedIn() && existing().ownerId == request.auth.uid) || isBootstrappedAdmin();
+      allow create: if isVerifiedUser()
+        && isValidId(docId)
+        && isValidDealerDocument(incoming())
+        && incoming().id == docId
+        && incoming().ownerId == request.auth.uid
+        && incoming().reviewStatus == 'pending'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && exists(/databases/$(database)/documents/dealers/$(incoming().dealerId));
+      allow update: if isAdmin()
+        && isValidId(docId)
+        && isValidDealerDocument(incoming())
+        && incoming().id == existing().id
+        && incoming().dealerId == existing().dealerId
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    // Marketplace vehicle listings
+    match /vehicle_listings/{listingId} {
+      allow get: if existing().listingStatus == 'published'
+        || (isSignedIn() && (existing().sellerId == request.auth.uid || isAdmin()));
+      allow list: if existing().listingStatus == 'published'
+        || (isSignedIn() && existing().sellerId == request.auth.uid)
+        || isBootstrappedAdmin();
+      allow create: if isVerifiedUser()
+        && isValidId(listingId)
+        && isValidListing(incoming())
+        && incoming().id == listingId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            incoming().sellerId == request.auth.uid
+            && incoming().listingStatus == 'pending'
+            && incoming().moderationStatus == 'pending'
+            && incoming().isFeatured == false
+            && (!('enquiryCount' in incoming()) || incoming().enquiryCount == 0)
+          )
+        );
+      allow update: if isVerifiedUser()
+        && isValidId(listingId)
+        && isValidListing(incoming())
+        && incoming().id == existing().id
+        && incoming().sellerId == existing().sellerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            existing().sellerId == request.auth.uid
+            && existing().listingStatus != 'archived'
+            && incoming().isFeatured == existing().isFeatured
+            && incoming().moderationStatus == existing().moderationStatus
+            && (
+              (
+                incoming().listingStatus == existing().listingStatus
+                && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'price', 'priceType', 'availabilityStatus', 'mileageKm', 'description', 'imageUrls', 'sellerWhatsapp', 'updatedAt'])
+              ) || (
+                existing().moderationStatus == 'revision_required'
+                && incoming().listingStatus == 'pending'
+                && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'price', 'priceType', 'availabilityStatus', 'mileageKm', 'description', 'imageUrls', 'sellerWhatsapp', 'listingStatus', 'updatedAt'])
+              )
+            )
+          )
+        );
+      allow delete: if false;
+    }
+
+    // Auditable verification records (admin-controlled)
+    match /verification_records/{recordId} {
+      allow get: if existing().status == 'verified' || isAdmin();
+      allow list: if existing().status == 'verified' || isBootstrappedAdmin();
+      allow create: if isAdmin()
+        && isValidId(recordId)
+        && isValidVerificationRecord(incoming())
+        && incoming().id == recordId
+        && incoming().verifiedAt == request.time;
+      allow update: if isAdmin()
+        && isValidId(recordId)
+        && isValidVerificationRecord(incoming())
+        && incoming().id == existing().id
+        && incoming().listingId == existing().listingId
+        && incoming().verifiedAt == request.time;
+      allow delete: if isAdmin() && isValidId(recordId);
+    }
+
+    // Buyer enquiries (public create allowed, PII read restricted)
+    match /enquiries/{enquiryId} {
+      allow get: if isSignedIn() && (existing().sellerId == request.auth.uid || existing().buyerUid == request.auth.uid || isAdmin());
+      allow list: if (isSignedIn() && (existing().sellerId == request.auth.uid || existing().buyerUid == request.auth.uid)) || isBootstrappedAdmin();
+      allow create: if isValidId(enquiryId)
+        && isValidEnquiry(incoming())
+        && incoming().id == enquiryId
+        && incoming().enquiryStatus == 'new'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          (!isSignedIn() && (!('buyerUid' in incoming()) || incoming().buyerUid == '')) ||
+          (isSignedIn() && incoming().buyerUid == request.auth.uid)
+        );
+      allow update: if isVerifiedUser()
+        && isValidId(enquiryId)
+        && isValidEnquiry(incoming())
+        && incoming().id == existing().id
+        && incoming().sellerId == existing().sellerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            existing().sellerId == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly(['enquiryStatus', 'updatedAt'])
+          )
+        );
+      allow delete: if false;
+    }
+
+    // Saved listings per user
+    match /saved_listings/{savedId} {
+      allow get: if isSignedIn() && (existing().profileId == request.auth.uid || isAdmin());
+      allow list: if (isSignedIn() && existing().profileId == request.auth.uid) || isBootstrappedAdmin();
+      allow create: if isVerifiedUser()
+        && isValidId(savedId)
+        && isValidSavedListing(incoming())
+        && incoming().id == savedId
+        && incoming().profileId == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidId(savedId) && existing().profileId == request.auth.uid;
+    }
+
+    // Automotive Journal articles
+    match /articles/{articleId} {
+      allow get: if existing().status == 'published' || isAdmin();
+      allow list: if existing().status == 'published' || isBootstrappedAdmin();
+      allow create: if isAdmin()
+        && isValidId(articleId)
+        && isValidArticle(incoming())
+        && incoming().id == articleId
+        && incoming().publishedAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isAdmin()
+        && isValidId(articleId)
+        && isValidArticle(incoming())
+        && incoming().id == existing().id
+        && incoming().publishedAt == existing().publishedAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isAdmin() && isValidId(articleId);
+    }
+
+    // Suspicious listing reports
+    match /listing_reports/{reportId} {
+      allow get: if isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(reportId)
+        && isValidListingReport(incoming())
+        && incoming().id == reportId
+        && incoming().status == 'open'
+        && incoming().createdAt == request.time;
+      allow update: if isAdmin()
+        && isValidId(reportId)
+        && isValidListingReport(incoming())
+        && incoming().id == existing().id
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if false;
+    }
+
+    // Newsletter subscribers
+    match /newsletter_subscribers/{subId} {
+      allow get: if isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(subId)
+        && isValidNewsletterSubscriber(incoming())
+        && incoming().id == subId
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin() && isValidId(subId);
+    }
+
+    // Immutable admin audit logs
+    match /audit_logs/{logId} {
+      allow get: if isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isAdmin()
+        && isValidId(logId)
+        && isValidAuditLog(incoming())
+        && incoming().id == logId
+        && incoming().actorId == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

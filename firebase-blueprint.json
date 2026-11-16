@@ -1,0 +1,279 @@
+{
+  "entities": {
+    "Profile": {
+      "title": "Profile",
+      "description": "User account profile with role and verification metadata.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 180 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "avatarUrl": { "type": "string", "maxLength": 500 },
+        "role": { "type": "string", "enum": ["customer", "dealer", "private_seller", "admin"] },
+        "status": { "type": "string", "enum": ["active", "suspended"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "fullName", "email", "role", "status", "createdAt", "updatedAt"]
+    },
+    "Dealer": {
+      "title": "Dealer",
+      "description": "Dealership public showroom profile in Nigeria.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "businessName": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "slug": { "type": "string", "minLength": 2, "maxLength": 140, "pattern": "^[a-z0-9\\-]+$" },
+        "description": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "coverImageUrl": { "type": "string", "maxLength": 500 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "whatsapp": { "type": "string", "maxLength": 40 },
+        "website": { "type": "string", "maxLength": 300 },
+        "state": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "city": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "address": { "type": "string", "maxLength": 300 },
+        "verificationStatus": { "type": "string", "enum": ["pending", "verified", "rejected", "info_requested"] },
+        "isFeatured": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "businessName", "slug", "description", "state", "city", "verificationStatus", "isFeatured", "createdAt", "updatedAt"]
+    },
+    "DealerDocument": {
+      "title": "DealerDocument",
+      "description": "Private dealership onboarding and CAC/identity verification document metadata.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "dealerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "documentType": { "type": "string", "enum": ["cac_certificate", "showroom_proof", "director_id", "import_permit"] },
+        "referenceCode": { "type": "string", "minLength": 2, "maxLength": 180 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "reviewStatus": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "reviewedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "dealerId", "ownerId", "documentType", "referenceCode", "reviewStatus", "createdAt", "updatedAt"]
+    },
+    "VehicleListing": {
+      "title": "VehicleListing",
+      "description": "Marketplace vehicle listing offered by an approved dealer or verified private seller.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "sellerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "dealerId": { "type": "string", "maxLength": 128 },
+        "sellerType": { "type": "string", "enum": ["dealer", "private_seller", "curated"] },
+        "sellerName": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "sellerWhatsapp": { "type": "string", "maxLength": 40 },
+        "make": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "makeSlug": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "model": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "modelSlug": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "generationName": { "type": "string", "maxLength": 100 },
+        "variantName": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string", "enum": ["Exotic", "Luxury", "Executive", "Performance", "Luxury SUVs", "Premium sedans"] },
+        "title": { "type": "string", "minLength": 5, "maxLength": 160 },
+        "slug": { "type": "string", "minLength": 3, "maxLength": 180, "pattern": "^[a-z0-9\\-]+$" },
+        "year": { "type": "number" },
+        "price": { "type": "number" },
+        "currency": { "type": "string", "enum": ["NGN", "USD"] },
+        "priceType": { "type": "string", "enum": ["fixed", "negotiable", "price_on_request"] },
+        "mileageKm": { "type": "number" },
+        "condition": { "type": "string", "enum": ["brand_new", "foreign_used", "nigeria_used"] },
+        "bodyType": { "type": "string", "maxLength": 60 },
+        "transmission": { "type": "string", "maxLength": 60 },
+        "fuelType": { "type": "string", "maxLength": 60 },
+        "drivetrain": { "type": "string", "maxLength": 60 },
+        "engine": { "type": "string", "maxLength": 100 },
+        "horsepower": { "type": "string", "maxLength": 40 },
+        "torque": { "type": "string", "maxLength": 40 },
+        "zeroTo100": { "type": "string", "maxLength": 40 },
+        "topSpeed": { "type": "string", "maxLength": 40 },
+        "exteriorColor": { "type": "string", "maxLength": 60 },
+        "interiorColor": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "minLength": 20, "maxLength": 4000 },
+        "state": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "city": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "imageUrls": { "type": "array" },
+        "listingStatus": { "type": "string", "enum": ["draft", "pending", "published", "rejected", "archived"] },
+        "availabilityStatus": { "type": "string", "enum": ["available", "reserved", "sold", "unavailable"] },
+        "moderationStatus": { "type": "string", "enum": ["pending", "approved", "rejected", "revision_required"] },
+        "moderationFeedback": { "type": "string", "maxLength": 1000 },
+        "isFeatured": { "type": "boolean" },
+        "collectionTag": { "type": "string", "maxLength": 80 },
+        "enquiryCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "sellerId", "sellerType", "sellerName", "make", "makeSlug", "model", "modelSlug", "category", "title", "slug", "year", "price", "currency", "priceType", "mileageKm", "condition", "bodyType", "transmission", "fuelType", "description", "state", "city", "imageUrls", "listingStatus", "availabilityStatus", "moderationStatus", "isFeatured", "createdAt", "updatedAt"]
+    },
+    "VerificationRecord": {
+      "title": "VerificationRecord",
+      "description": "Auditable vehicle or seller verification check completed by Supercars.ng moderators.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "listingId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "verificationType": { "type": "string", "enum": ["seller_identity", "dealer_business", "vehicle_identity", "ownership_documentation", "physical_inspection"] },
+        "status": { "type": "string", "enum": ["verified", "pending", "failed"] },
+        "notes": { "type": "string", "maxLength": 800 },
+        "evidenceReference": { "type": "string", "maxLength": 180 },
+        "verifiedBy": { "type": "string", "maxLength": 128 },
+        "verifiedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "listingId", "verificationType", "status", "notes", "evidenceReference", "verifiedBy", "verifiedAt"]
+    },
+    "Enquiry": {
+      "title": "Enquiry",
+      "description": "Qualified buyer enquiry submitted for a vehicle listing or dealership.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "listingId": { "type": "string", "maxLength": 128 },
+        "listingTitle": { "type": "string", "maxLength": 180 },
+        "dealerId": { "type": "string", "maxLength": 128 },
+        "sellerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "buyerUid": { "type": "string", "maxLength": 128 },
+        "buyerName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "buyerPhone": { "type": "string", "minLength": 6, "maxLength": 40 },
+        "buyerEmail": { "type": "string", "format": "email", "maxLength": 180 },
+        "message": { "type": "string", "minLength": 5, "maxLength": 2000 },
+        "preferredContact": { "type": "string", "enum": ["whatsapp", "phone", "email"] },
+        "enquiryStatus": { "type": "string", "enum": ["new", "contacted", "qualified", "closed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "sellerId", "buyerName", "buyerPhone", "buyerEmail", "message", "preferredContact", "enquiryStatus", "createdAt", "updatedAt"]
+    },
+    "SavedListing": {
+      "title": "SavedListing",
+      "description": "User-saved marketplace vehicle listing.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 260, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "profileId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "listingId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "profileId", "listingId", "createdAt"]
+    },
+    "Article": {
+      "title": "Article",
+      "description": "Automotive journal editorial piece.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "authorName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "category": { "type": "string", "enum": ["News", "Reviews", "Buying guides", "Comparisons", "Ownership", "Market"] },
+        "seriesName": { "type": "string", "maxLength": 100 },
+        "title": { "type": "string", "minLength": 5, "maxLength": 180 },
+        "slug": { "type": "string", "minLength": 3, "maxLength": 180, "pattern": "^[a-z0-9\\-]+$" },
+        "excerpt": { "type": "string", "minLength": 10, "maxLength": 600 },
+        "body": { "type": "string", "minLength": 50, "maxLength": 15000 },
+        "featuredImageUrl": { "type": "string", "maxLength": 500 },
+        "researchDate": { "type": "string", "maxLength": 60 },
+        "relatedMake": { "type": "string", "maxLength": 80 },
+        "relatedModel": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "enum": ["draft", "published"] },
+        "publishedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "authorId", "authorName", "category", "title", "slug", "excerpt", "body", "featuredImageUrl", "status", "publishedAt", "updatedAt"]
+    },
+    "ListingReport": {
+      "title": "ListingReport",
+      "description": "Buyer report for suspicious or inaccurate marketplace listings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "listingId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "listingTitle": { "type": "string", "maxLength": 180 },
+        "reason": { "type": "string", "enum": ["misleading_price", "fake_photos", "already_sold", "suspected_fraud", "other"] },
+        "details": { "type": "string", "minLength": 5, "maxLength": 1500 },
+        "reporterEmail": { "type": "string", "maxLength": 180 },
+        "status": { "type": "string", "enum": ["open", "reviewed", "resolved"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "listingId", "reason", "details", "status", "createdAt"]
+    },
+    "NewsletterSubscriber": {
+      "title": "NewsletterSubscriber",
+      "description": "Editorial journal email subscription.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 180 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "createdAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable administrative action log.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "actorId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "actorEmail": { "type": "string", "maxLength": 180 },
+        "action": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "targetType": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "targetId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "summary": { "type": "string", "minLength": 2, "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "actorId", "actorEmail", "action", "targetType", "targetId", "summary", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/profiles/{userId}": {
+      "schema": { "$ref": "#/entities/Profile" },
+      "description": "Private user account profiles indexed by Firebase Auth UID."
+    },
+    "/dealers/{dealerId}": {
+      "schema": { "$ref": "#/entities/Dealer" },
+      "description": "Dealership profiles (published verified profiles readable publicly; pending readable by owner and admins)."
+    },
+    "/dealer_documents/{docId}": {
+      "schema": { "$ref": "#/entities/DealerDocument" },
+      "description": "Private dealership verification documents accessible only to owner and admins."
+    },
+    "/vehicle_listings/{listingId}": {
+      "schema": { "$ref": "#/entities/VehicleListing" },
+      "description": "Vehicle listings with moderation status gating public visibility."
+    },
+    "/verification_records/{recordId}": {
+      "schema": { "$ref": "#/entities/VerificationRecord" },
+      "description": "Auditable verification check records created exclusively by administrators."
+    },
+    "/enquiries/{enquiryId}": {
+      "schema": { "$ref": "#/entities/Enquiry" },
+      "description": "Buyer enquiries readable only by target seller/dealer, buyer, or admins."
+    },
+    "/saved_listings/{savedId}": {
+      "schema": { "$ref": "#/entities/SavedListing" },
+      "description": "Saved vehicle bookmarks owned by signed-in users."
+    },
+    "/articles/{articleId}": {
+      "schema": { "$ref": "#/entities/Article" },
+      "description": "Automotive journal articles managed by administrators."
+    },
+    "/listing_reports/{reportId}": {
+      "schema": { "$ref": "#/entities/ListingReport" },
+      "description": "Suspicious listing reports submitted by visitors for admin review."
+    },
+    "/newsletter_subscribers/{subId}": {
+      "schema": { "$ref": "#/entities/NewsletterSubscriber" },
+      "description": "Newsletter subscription records."
+    },
+    "/audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Immutable administrative audit trail."
+    }
+  }
+}

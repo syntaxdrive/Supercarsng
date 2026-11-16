@@ -1,0 +1,6 @@
+{
+  "name": "Supercars.ng — The Art of Exceptional Automobiles",
+  "description": "Nigeria-focused premium automotive marketplace, discovery platform, and editorial brand connecting buyers with verified luxury and exotic vehicles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
